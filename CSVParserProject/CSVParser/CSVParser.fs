@@ -1,6 +1,7 @@
 module CSVParser
 open ParserLibrary
 open JSONParser
+open System.IO
 open System
 open System.Net.NetworkInformation
 
@@ -307,7 +308,7 @@ let ReqDuration_P =
 
 let comma =
     spaces >>. pchar ',' .>> spaces
-    <?>"comma"
+    //<?>"comma"
 let CSVRecord = 
     [
         spaces >>.ID_P.>>comma
@@ -331,5 +332,46 @@ let CSVRecord =
         ReqDuration_P
     ]
 
-let parseCSV =
-    run (many (sequence CSVRecord))
+let seq = sequence CSVRecord// <?> "Record"
+let parseCSVRecord =
+    run  seq
+
+//////////////////////////////////////////////////
+type CSV_Res =
+    |CSVData of data list
+    |FailInfo of string
+
+let parseCSVForMap indx input =
+        let x = parseCSVRecord input
+        match x with 
+        |Success (result, _) ->
+            CSVData result
+        |Failure (label,error,parserPos) ->
+            let errorLine = parserPos.currentLine
+            let colPos = parserPos.column
+            let linePos = parserPos.line
+            let failureCaret = sprintf "%*s^%s" colPos "" error
+
+            FailInfo (sprintf "Line:%d Col:%d Error parsing %s, %s" (indx+1) colPos label error)//errorLine failureCaret )
+    
+
+let ParseCSVFile (filePath:string) =
+
+    let sr = new StreamReader(filePath)
+    sr.ReadLine() |> ignore
+    let input = sr.ReadToEnd()
+    let inputs = input.Split('\n');
+    let c = Array.mapi parseCSVForMap inputs
+
+    let Success_list = Array.filter (fun x -> x.GetType().Name = "CSVData") c
+    let failed_list = Array.filter (fun x -> x.GetType().Name = "FailInfo") c
+    sr.Close()
+    (Success_list , failed_list)
+
+let parseCSVString (input:string) =
+    let inputs = input.Split('\n');
+    let c = Array.mapi parseCSVForMap inputs
+
+    let Success_list = Array.filter (fun x -> x.GetType().Name = "CSVData") c
+    let failed_list = Array.filter (fun x -> x.GetType().Name = "FailInfo") c
+    (Success_list , failed_list)
