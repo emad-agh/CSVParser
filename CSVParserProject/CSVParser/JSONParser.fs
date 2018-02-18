@@ -263,23 +263,26 @@ let jObject =
 
 let chars =
     let label = "char"
-    satisfy (fun ch -> ch <> ',' && ch <> '{' && ch <> '}' && ch <> '[' && ch <> ']' && not (Char.IsDigit ch)) label
+    satisfy (fun ch -> ch <> ',' && ch <> '{' && ch <> '}' && ch <> '[' && ch <> ']' (* && not (Char.IsDigit ch) *)) label
     //satisfy (fun ch -> ch <> 's') label
 
-let numberChar =
+(* let numberChar =
     let label = "number-char"
     satisfy (Char.IsDigit) label
 let unqouted =
     manyChars numberChar .>>. manyChars1 chars .>>. manyChars numberChar
     |>> (fun ((s,s1),s3)->s+s1+s3)
-    |> many1
+    |> many1 *)
 
-let ewr =
+let unqouted =
+    manyChars1 chars
+    |> many1
+let helper =
     unqouted
     |>> List.toArray
     |>> String.concat ""
 let jUnquotedString =
-    ewr
+    helper
     |>> JUnquotedString
     <?> "Unquoted string"
 
@@ -336,8 +339,8 @@ let jEmptyObject =
     let right1 = 
         pstring "}" .>> spaces
     
-    (left.>>.right) <|> (left1.>>.right1)
-    |>> fun (s1,s2)->sprintf "%s%s" s1 s2
+    (left.>>.spaces.>>.right) <|> (left1.>>.spaces.>>.right1)
+    |>> fun ((s1,cl),s2)->sprintf "%s%s" s1 s2
     |>> JEmptyObject
     <?> "jEmptyObject"
 // ======================================

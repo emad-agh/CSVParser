@@ -2,6 +2,7 @@ module CSVParser
 open ParserLibrary
 open JSONParser
 open System
+open System.Net.NetworkInformation
 
 type httpMeth =
     |GET
@@ -32,6 +33,7 @@ type data =
     |RsponseDto     of string
     |ErrorResponse  of string 
     |ReqDuration    of string
+    |ParseFail      of string
 
 // ======================================
 // helping funcs
@@ -135,7 +137,7 @@ let AbsoluteUri_P =
 // Parsing PathInfo                    
 // ====================================== 
 let p1 =
-    pchar '/' .>>. manyChars (satisfy (fun ch -> ch <> ',') "")
+    pchar '/' .>>. manyChars1 (satisfy (fun ch -> ch <> ',' && ch <> '~' && ch <> '#' && ch <> '%' && ch <> '&' && ch <> '*' && ch <> '{'&& ch <> '}' && ch <> '\\' && ch <> ':' && ch <> '<' && ch <> '>' && ch <> '?' && ch <> '/' && ch <> '+' && ch <> '|' && ch <> '\"') "")
     |>> (fun (c, str)-> sprintf "%c%s" c str)
 
 let PathInfo_P =
@@ -148,7 +150,7 @@ let PathInfo_P =
 // Parsing ReqBody
 // ====================================== 
 let ReqBody_P =    
-    jObject <|> empty JUnquotedString
+    jObjectQuoted <|> jEmptyObject<|> jObject <|> empty JUnquotedString
     |>>ReqBody
     <?>"ReqBody"
 
@@ -226,7 +228,7 @@ let Referer_P =
 // Parsing Headers                      ????
 // ======================================
 let Headers_P =
-    jObjectQuoted
+    jObjectQuoted <|> jEmptyObject<|> jObject <|> empty JUnquotedString
     |>>Headers
     <?>"Headers"  
 
@@ -234,7 +236,7 @@ let Headers_P =
 // Parsing FormData                     
 // ======================================
 let FormData_P =
-    jEmptyObject <|> jObject <|> empty JUnquotedString
+    jObjectQuoted <|> jEmptyObject<|> jObject <|> empty JUnquotedString
     |>>FormData
     <?>"FormData"
 
@@ -242,7 +244,7 @@ let FormData_P =
 // Parsing Items                        ????
 // ======================================
 let Items_P =
-    jObjectQuoted
+    jObjectQuoted <|> jEmptyObject<|> jObject <|> empty JUnquotedString
     |>>Items
     <?>"Items"
 
